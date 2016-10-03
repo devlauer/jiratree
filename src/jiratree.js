@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Ticketbaum
+// @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
 // @version      0.1
-// @description  Zeigt einen Baum für ein bestimmtes Ticket an.
+// @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
 // @grant        none
@@ -59,7 +59,7 @@
         ////////////////////////////////////////////////////////////////////////////////////
 
 
-        $('body').append("<div id='dialogBaum' title='Baumansicht'><div id='treetable'></div></div> ");
+        $('body').append("<div id='dialogBaum' title='Treeview'><div id='treetable'></div></div> ");
         $( "#dialogBaum" ).dialog({autoOpen: false,
                                    modal: true});
         /////////////////////////////////////////////////////////////////////////////////////
@@ -79,13 +79,13 @@
                      console.log('test');
                      return {
                          "Fensteranzeige": {
-                             "label": "Ticket in neuem Fenster anzeigen",
+                             "label": "show in new window",
                              "action": function (obj) {
                                  de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,true);
                              }
                          },
                          "Anzeige": {
-                             "label": "Ticket im gleichen Fenster anzeigen",
+                             "label": "show in same window",
                              "action": function (obj) {
                                  de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,false);
                              }
@@ -106,7 +106,7 @@
                 de.elnarion.jira.paintTree(issueKey);
             },
             items: {
-                "Baumansicht": {name: "Baumansicht", icon: "tree"}    
+                "Treeview": {name: "Treeview", icon: "tree"}    
             }
         });
 
