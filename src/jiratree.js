@@ -4,8 +4,7 @@
 // @version      0.1
 // @description  Zeigt einen Baum für ein bestimmtes Ticket an.
 // @author       dev.lauer
-// @match        https://prodserver/jira/secure/Dashboar*
-// @match        file:///C:/Users/lauermat/AppData/Roaming/Mozilla/Firefox/Profiles/mqw56p6v.default/ScrapBook/data/20160731212959/index.html
+// @match        *://*/*/secure/Dashboar*
 // @grant        none
 // @require https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js
 // @require https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.2.3/jquery.contextMenu.min.js
@@ -20,162 +19,340 @@
 (function() {
     'use strict';
     $(document).ready(function() {
-    // add css for context menu
-    var link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.2.3/jquery.contextMenu.min.css';
-    document.getElementsByTagName("head")[0].appendChild(link);
-    link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.0/jquery-ui.min.css';
-    document.getElementsByTagName("head")[0].appendChild(link);
-    link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.0/jquery-ui.theme.min.css';
-    document.getElementsByTagName("head")[0].appendChild(link);
-    link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.2/themes/default/style.min.css';    
-    document.getElementsByTagName("head")[0].appendChild(link);
-    // small workaround for IE which does not like creating styles
-    var css = ".ui-dialog { overflow:hidden}";
-    var htmlDiv = document.createElement('div');
-    htmlDiv.innerHTML = '<p>foo</p><style>' + css + '</style>';
-    document.getElementsByTagName("head")[0].appendChild(htmlDiv.childNodes[1]);
-    $('body').append("<div id='dialogBaum' title='Baumansicht'><div id='treetable'></div></div> ");
-    $( "#dialogBaum" ).dialog({autoOpen: false,
-        modal: true});
-    $('#treetable').jstree({ 'core' : { 'data' : [{id:'id1',text:'Simple root node',parent:'#'}]}});
-    $(".dashboard-item-frame").contextMenu({
-        selector: '.issuekey', 
-        callback: function(key, options) {
-            console.log('triggered');
-            console.log(options);
-            var issueKey = options.$trigger.find(".issue-link").attr('data-issue-key');
-            console.log(issueKey);
-            de.elnarion.jira.paintTree(issueKey);
-        },
-        items: {
-            "Baumansicht": {name: "Baumansicht", icon: "tree"}    
-        }
-    });
-    var de = de || {};
-    de.elnarion = function(){
-        return {
-        };
-    }();
-    de.elnarion.counter = 0;
-    de.elnarion.jira = function(){
-        var baseURL = "/jira/rest/api/latest/";
-        var currentIssue = {};
-        function getIssue(issuekey, options){
-            var promise = $.ajax({
-                url: baseURL+"issue/"+ issuekey +"?fields=timetracking,subtasks,sub-tasks,issuelinks",
+
+        /////////////////////////////////////////////////////////////////////////////////////
+        // custom css
+        ////////////////////////////////////////////////////////////////////////////////////
+
+        // add css for context menu
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.2.3/jquery.contextMenu.min.css';
+        document.getElementsByTagName("head")[0].appendChild(link);
+        link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.0/jquery-ui.min.css';
+        document.getElementsByTagName("head")[0].appendChild(link);
+        link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.0/jquery-ui.theme.min.css';
+        document.getElementsByTagName("head")[0].appendChild(link);
+        link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.2/themes/default/style.min.css';    
+        document.getElementsByTagName("head")[0].appendChild(link);
+        // small workaround for IE which does not like creating styles
+        var css = ""+
+            ".ui-dialog { overflow:hidden} "+
+            ".jstree-contextmenu { z-index: 999}"
+        ;
+        var htmlDiv = document.createElement('div');
+        htmlDiv.innerHTML = '<p>foo</p><style>' + css + '</style>';
+        document.getElementsByTagName("head")[0].appendChild(htmlDiv.childNodes[1]);
+
+        /////////////////////////////////////////////////////////////////////////////////////
+        // dialog widget
+        ////////////////////////////////////////////////////////////////////////////////////
+
+
+        $('body').append("<div id='dialogBaum' title='Baumansicht'><div id='treetable'></div></div> ");
+        $( "#dialogBaum" ).dialog({autoOpen: false,
+                                   modal: true});
+        /////////////////////////////////////////////////////////////////////////////////////
+        // tree widget
+        ////////////////////////////////////////////////////////////////////////////////////
+
+        $('#treetable').jstree(
+            { 'core' : 
+             { 'data' : 
+              [
+                  {id:'id1',text:'Simple root node',parent:'#'}
+              ]
+             },
+             "plugins" : [ "contextmenu" ],
+             "contextmenu": {
+                 "items": function ($node) {
+                     console.log('test');
+                     return {
+                         "Fensteranzeige": {
+                             "label": "Ticket in neuem Fenster anzeigen",
+                             "action": function (obj) {
+                                 de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,true);
+                             }
+                         },
+                         "Anzeige": {
+                             "label": "Ticket im gleichen Fenster anzeigen",
+                             "action": function (obj) {
+                                 de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,false);
+                             }
+                         }
+                     };
+                 }
+             }
+            }
+        );
+        /////////////////////////////////////////////////////////////////////////////////////
+        // standard context-menu
+        ////////////////////////////////////////////////////////////////////////////////////
+
+        $(".dashboard-item-frame").contextMenu({
+            selector: '.issuekey', 
+            callback: function(key, options) {
+                var issueKey = options.$trigger.find(".issue-link").attr('data-issue-key');
+                de.elnarion.jira.paintTree(issueKey);
+            },
+            items: {
+                "Baumansicht": {name: "Baumansicht", icon: "tree"}    
+            }
+        });
+
+        /////////////////////////////////////////////////////////////////////////////////////
+        // custom namespace de.elnarion
+        // - used to separate all custom functions from the global namespace
+        ////////////////////////////////////////////////////////////////////////////////////
+        window.de = window.de || {};
+        de.elnarion = function(){
+            return {
+            };
+        }();
+        de.elnarion.counter = 0;
+        de.elnarion.jira = function(){
+            /////////////////////////////////////
+            // private defaultvalues
+            ////////////////////////////////////
+            var styleObject = {
+                'Done':'background-color:lightgray;color:darkgray;text-decoration: line-through',
+                'Open':'background-color:#ffcccc',
+                'Reopened':'background-color:#ffcccc',
+                'To Do':'background-color:#ffcccc',
+                'Resolved':'background-color:#ccffcc',
+                'In Progress':'background-color:#b3b3ff',
+                'Backlog':'background-color:#e6ccb3'
+            };
+            var debug = false;
+            var baseContext = "/jira";
+            var baseURL = '';
+            var baseBrowseURL = '';
+            var imageURL = '';
+            var usedLinkTypes = ['is blocked by','references'];
+            var currentIssue = {};
+            var promiseContext = $.ajax({
+                url: baseContext+"/rest/api/latest/serverInfo",
                 type: "GET",
                 dataType: "json",
                 contentType: "application/json",
-            }).done(function( data, textStatus, jqXHR ) {
-                //return data;
+            }).fail(function( jqXHR, textStatus, errorThrown  ) {
+                console.log('Context not found! Error:'+errorThrown);
+                baseContext = '';
+            }).always(function(data, textStatus, jqXHR){
+                baseURL = baseContext+"/rest/api/latest/";
+                baseBrowseURL = baseContext+"/browse/";
+                imageURL = baseContext+"/images/icons/issuetypes/";
             });
-            return promise;
-        }
-        function paintTreeWidget(root)
-        {
-            $('#treetable').jstree(true).settings.core.data = root;
-            $('#treetable').jstree(true).refresh();
-            $( "#dialogBaum" ).dialog({autoOpen: false,
-        modal: true});
-            $( "#dialogBaum" ).dialog('open');
-            console.log("tree");
-            console.log(root);
-        }
-        function resolveData(childObject,root)
-        {
-            de.elnarion.counter++;
-            childObject.state = {  opened    : true  };
-            $.when(getIssue(childObject.id).done(function(data){
-                var result = buildTree(data,root,childObject);
-                de.elnarion.counter--;
-                if(de.elnarion.counter===0)
-                {
-                    paintTreeWidget(root);
-                }
-            }));
-        }
-        function buildTree(issue,tree,parent)
-        {
-            var children = false;
-            var child={};            
-            var links = issue.fields.issuelinks;
-            var linksLength = links.length;
-            var i = 0;
-            for(i=0;i<linksLength;i++)
+            /////////////////////////////////////
+            // public getIssue()
+            //    issuekey - the issuekey in jira
+            //    options - currently ignored
+            //
+            // calls the jira REST-API and returns some data (timetracking, subtasks, 
+            // sub-tasks, issuelinks, issuetype, status) for the issue
+            /////////////////////////////////////
+            function getIssue(issuekey, options){
+                var promise = $.ajax({
+                    url: baseURL+"issue/"+ issuekey +"?fields=timetracking,subtasks,sub-tasks,issuelinks,issuetype,status",
+                    type: "GET",
+                    dataType: "json",
+                    contentType: "application/json",
+                });
+                return promise;
+            }
+            /////////////////////////////////////
+            // private paintTreeWidget()
+            //    root - a json-data array for the widget
+            //
+            // refreshes the existing widget with the name "dialogBaum" 
+            // with the data contained in the root-object
+            /////////////////////////////////////
+            function paintTreeWidget(root)
             {
-                if(links[i].inwardIssue===undefined)
-                {}
-                else{
-                    if (links[i].type.inward == 'is blocked by')
+                $('#treetable').jstree(true).settings.core.data = root;
+                $('#treetable').jstree(true).refresh();
+                $( "#dialogBaum" ).dialog({autoOpen: false, modal: true});
+                $( "#dialogBaum" ).dialog('open');
+                if(debug)
+                {
+                    console.log("tree");
+                    console.log(root);
+                }
+            }
+            /////////////////////////////////////
+            // private resolveData()
+            //    childObject - an object referencing an issue
+            //    root - a json-data array for the tree-widget
+            //
+            // resolves the data for the passed-in issue and
+            // repaints the tree-widget if all recursive resolving
+            // is done
+            /////////////////////////////////////
+            function resolveData(childObject,root)
+            {
+                de.elnarion.counter++;
+                childObject.state = {  opened    : true  };
+                $.when(getIssue(childObject.id).done(function(data){
+                    var result = buildTree(data,root,childObject);
+                    de.elnarion.counter--;
+                    if(de.elnarion.counter===0)
                     {
-                        //if(tree.children===undefined)
-                        //    tree.children = [];
-                        child={};
-                        child.id = links[i].inwardIssue.key;
-                        child.parent = parent.id;
-                        child.text = links[i].inwardIssue.fields.summary;
-                        //tree.children.push(child);
-                        tree.push(child);
-                        resolveData(child,tree);
+                        paintTreeWidget(root);
+                    }
+                }));
+            }
+            /////////////////////////////////////
+            // private fillIssueData()
+            //    issue - an object referencing an issue
+            //    parentID - the key of the parent issue
+            //
+            // sets the data for a tree-node-object and its style 
+            // and returns this object
+            /////////////////////////////////////
+            function fillIssueData(issue,parentID)
+            {
+                var result={};
+                if(debug)
+                {
+                    console.log('issue');
+                    console.log(issue);
+                }
+                result.id = issue.key;
+                result.parent = parentID;
+                result.text = issue.fields.summary;
+                if(result.text=== undefined)
+                    result.text=issue.key;
+                var styleKey = issue.fields.status.name;
+                if(debug)
+                {
+                    console.log('style for reference is');
+                    console.log('::'+styleKey+'::');
+                    console.log('styleObject'+styleObject[styleKey]);
+                }
+                if(!(styleObject[styleKey]===undefined))
+                {
+                    result.a_attr = { style:styleObject[styleKey]};                    
+                }
+                result.icon = issue.fields.issuetype.iconUrl;
+                result.state = {  opened    : true  };
+                return result;
+            }
+            /////////////////////////////////////
+            // private handleTreeData()
+            //    treeArray - an object array representing all nodes of a tree
+            //    issue - the issuedata to be added to the tree
+            //    parentID - the key of the parent issue
+            //
+            // sets the data for a tree-node and its style 
+            /////////////////////////////////////
+            function handleTreeData(treeArray,issue,parentId)
+            {
+                var child={};
+                child = fillIssueData(issue, parentId);
+                treeArray.push(child);
+                resolveData(child,treeArray);                
+            }
+            /////////////////////////////////////
+            // private buildTree()
+            //    tree - an object array representing all nodes of a tree
+            //    issue - the issue as root of the tree
+            //    parent - the key of the parent issue
+            //
+            // builds an object array representing all nodes of a tree
+            // by iterating through all referenced issues, subTasks etc.
+            // after everything is finished a tree-widget is painted or refreshed.
+            /////////////////////////////////////
+            function buildTree(issue,tree,parent)
+            {
+                var children = false;
+                var child={};            
+                var links = issue.fields.issuelinks;
+                var linksLength = links.length;
+                var i = 0;
+                for(i=0;i<linksLength;i++)
+                {
+                    if(!(links[i].inwardIssue===undefined))
+                    {
+                        if (usedLinkTypes.indexOf(links[i].type.inward)>-1)
+                        {
+                            handleTreeData(tree,links[i].inwardIssue, parent.id);
+                            children = true;
+                        }
+                    }
+                }
+                var subTasks = issue.fields.subtasks;
+                if (!(subTasks === undefined ))
+                {
+                    var subTasksLength = subTasks.length;
+                    for(i=0;i<subTasksLength;i++)
+                    {
+                        handleTreeData(tree,subTasks[i], parent.id);
                         children = true;
                     }
                 }
-            }
-            var subTasks = issue.fields.subtasks;
-            if (subTasks === undefined )
-            {}
-            else
-            {
-                var subTasksLength = subTasks.length;
-                for(i=0;i<subTasksLength;i++)
+                if((tree[0]==parent)&&(!children))
                 {
-//                    if(tree.children===undefined)
-//                       tree.children = [];
-                    child={};
-                    child.id = subTasks[i].key;
-                    child.parent = parent.id;
-                    child.text = subTasks[i].fields.summary;
-                    //tree.children.push(child);
-                    tree.push(child);
-                    resolveData(child,tree);
-                    children = true;
+                    paintTreeWidget(tree);
                 }
+                return tree;
             }
-            if((tree[0]==parent)&&(!children))
+            /////////////////////////////////////
+            // public paintTree()
+            //    issuekey - the issuekey of the root-issue of the tree
+            //
+            // paints a tree of an issue and its descendants
+            /////////////////////////////////////
+            function paintTree(issuekey){
+                var promise = getIssue(issuekey);
+                var tree = {};
+                $.when(promise.done(function(data){
+                    tree = fillIssueData(data,'#');
+                    buildTree(data,[tree],tree);
+                }));
+            }
+            /////////////////////////////////////
+            // public showIssue()
+            //    issuekey - the issuekey of the root-issue of the tree
+            //    newWindow - true for opening the issue in a new window, 
+            //                false for opening the issue in the same window
+            //
+            // open an issue in jira
+            /////////////////////////////////////
+            function showIssue(issuekey,newWindow)
             {
-                paintTreeWidget(tree);
+                if(debug)
+                {
+                    console.log(issuekey+"showIssue");
+                }
+                var windowname = '_blank';
+                if(!newWindow)
+                {
+                    windowname = '_self';
+                }
+                window.open(baseBrowseURL+issuekey, windowname); 
             }
-            return tree;
-        }
-        function paintTree(issuekey){
-            var promise = getIssue(issuekey);
-            var tree = {};
-            $.when(promise.done(function(data){
-                tree.id = data.key;
-                tree.text = data.description;
-                if(tree.text=== undefined)
-                    tree.text=tree.id;
-                tree.parent= '#';
-                tree.state = {  opened    : true  };
-                buildTree(data,[tree],tree);
-            }));
-        }
-        return {
-            getIssue: getIssue,
-            paintTree: paintTree
-        };
-    }();
-  });
+            /////////////////////////////////////
+            // public functions
+            /////////////////////////////////////            
+            return {
+                getIssue: getIssue,
+                paintTree: paintTree,
+                showIssue: showIssue
+            };
+        }();
+
+        /////////////////////////////////////////////////////////////////////////////////////
+        // end custom namespace de.elnarion
+        ////////////////////////////////////////////////////////////////////////////////////
+    });
 })();
