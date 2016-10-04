@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      0.7
+// @version      0.9
 // @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -61,7 +61,12 @@
 
 
         $('body').append("<div id='dialogBaum' title='Treeview'><div id='treetable'></div></div> ");
+        var dWidth = $(window).width() * 0.9;
+        var dHeight = $(window).height() * 0.9; 
         $( "#dialogBaum" ).dialog({autoOpen: false,
+                                   width: dWidth,
+                                   height: dHeight,
+                                   resizable: false,
                                    modal: true});
         /////////////////////////////////////////////////////////////////////////////////////
         // tree widget
@@ -156,9 +161,7 @@
             var usedLinkTypes = [
                 'is blocked by',
                 'hängt ab von',
-                'Umsetzung von',
-                'verbunden mit',
-                'references'
+                'Umsetzung von'
                 ];
             var currentIssue = {};
             var promiseContext = $.ajax({
@@ -202,7 +205,7 @@
             {
                 $('#treetable').jstree(true).settings.core.data = root;
                 $('#treetable').jstree(true).refresh();
-                $( "#dialogBaum" ).dialog({autoOpen: false, modal: true});
+//                $( "#dialogBaum" ).dialog({autoOpen: false, modal: true});
                 $( "#dialogBaum" ).dialog('open');
                 if(debug)
                 {
@@ -314,19 +317,22 @@
                             console.log(links[i]);
                         }
                         var linkedissue = {};
+                        var linkedtype = {};
                         if(!(links[i].inwardIssue===undefined))
                         {
                             linkedissue=links[i].inwardIssue;
+                            linkedtype=links[i].type.inward;
                         }
                         if(!(links[i].outwardIssue===undefined))
                         {
                             linkedissue=links[i].outwardIssue;
+                            linkedtype=links[i].type.outward;
                         }
                         if(jsontree.indexOf(linkedissue.key)>-1)
                         {
                             console.log('ignored issue'+linkedissue.key+' already inside');
                         }
-                        else if (usedLinkTypes.indexOf(links[i].type.inward)>-1)
+                        else if (usedLinkTypes.indexOf(linkedtype)>-1)
                         {
                             handleTreeData(tree,linkedissue, parent.id);
                             children = true;
