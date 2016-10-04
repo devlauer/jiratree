@@ -300,29 +300,35 @@
                 var links = issue.fields.issuelinks;
                 var linksLength = links.length;
                 var i = 0;
+                var jsontree;
                 for(i=0;i<linksLength;i++)
                 {
                     
                     if(!(links[i].type===undefined))
                     {
+                        jsontree = JSON.stringify(tree);
                         if(debug)
                         {
                             console.log('issuetype');
                             console.log(links[i].type.inward);
                             console.log(links[i]);
                         }
-                        var issue = {};
+                        var linkedissue = {};
                         if(!(links[i].inwardIssue===undefined))
                         {
-                            issue=links[i].inwardIssue;
+                            linkedissue=links[i].inwardIssue;
                         }
                         if(!(links[i].outwardIssue===undefined))
                         {
-                            issue=links[i].outwardIssue;
+                            linkedissue=links[i].outwardIssue;
                         }
-                        if (usedLinkTypes.indexOf(links[i].type.inward)>-1)
+                        if(jsontree.indexOf(linkedissue.key)>-1)
                         {
-                            handleTreeData(tree,issue, parent.id);
+                            console.log('ignored issue'+linkedissue.key+' already inside');
+                        }
+                        else if (usedLinkTypes.indexOf(links[i].type.inward)>-1)
+                        {
+                            handleTreeData(tree,linkedissue, parent.id);
                             children = true;
                         }
                     }
@@ -333,6 +339,11 @@
                     var subTasksLength = subTasks.length;
                     for(i=0;i<subTasksLength;i++)
                     {
+                        if(debug)
+                        {
+                            console.log('subtask');
+                            console.log(subTasks[i]);
+                        }
                         handleTreeData(tree,subTasks[i], parent.id);
                         children = true;
                     }
