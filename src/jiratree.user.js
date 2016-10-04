@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      0.9
+// @version      1.0
 // @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -161,7 +161,7 @@
             var usedLinkTypes = [
                 'is blocked by',
                 'hängt ab von',
-                'Umsetzung von'
+                'Wird umgesetzt in'
                 ];
             var currentIssue = {};
             var promiseContext = $.ajax({
