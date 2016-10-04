@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      0.5
+// @version      0.6
 // @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -302,7 +302,8 @@
                 var i = 0;
                 for(i=0;i<linksLength;i++)
                 {
-                    if(!(links[i].inwardIssue===undefined))
+                    
+                    if(!(links[i].type===undefined))
                     {
                         if(debug)
                         {
@@ -310,9 +311,18 @@
                             console.log(links[i].type.inward);
                             console.log(links[i]);
                         }
+                        var issue = {};
+                        if(!(links[i].inwardIssue===undefined))
+                        {
+                            issue=links[i].inwardIssue;
+                        }
+                        if(!(links[i].outwardIssue===undefined))
+                        {
+                            issue=links[i].outwardIssue;
+                        }
                         if (usedLinkTypes.indexOf(links[i].type.inward)>-1)
                         {
-                            handleTreeData(tree,links[i].inwardIssue, parent.id);
+                            handleTreeData(tree,issue, parent.id);
                             children = true;
                         }
                     }
