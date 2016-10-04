@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      0.2
+// @version      0.3
 // @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -79,13 +79,13 @@
                  "items": function ($node) {
                      console.log('test');
                      return {
-                         "Fensteranzeige": {
+                         "ShowInWindow": {
                              "label": "show in new window",
                              "action": function (obj) {
                                  de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,true);
                              }
                          },
-                         "Anzeige": {
+                         "Show": {
                              "label": "show in same window",
                              "action": function (obj) {
                                  de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,false);
@@ -153,7 +153,13 @@
             var baseURL = '';
             var baseBrowseURL = '';
             var imageURL = '';
-            var usedLinkTypes = ['is blocked by','references'];
+            var usedLinkTypes = [
+                'is blocked by',
+                'hängt ab von',
+                'Umsetzung von',
+                'verbunden mit',
+                'references'
+                ];
             var currentIssue = {};
             var promiseContext = $.ajax({
                 url: baseContext+"/rest/api/latest/serverInfo",
