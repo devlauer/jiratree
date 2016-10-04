@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      0.4
+// @version      0.5
 // @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -306,7 +306,7 @@
                     {
                         if(debug)
                         {
-                            console.log('issuetype')';
+                            console.log('issuetype');
                             console.log(links[i].type.inward);
                             console.log(links[i]);
                         }
