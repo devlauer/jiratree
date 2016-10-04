@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      0.6
+// @version      0.7
 // @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
