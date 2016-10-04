@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      0.3
+// @version      0.4
 // @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -148,7 +148,7 @@
                 'In Arbeit':'background-color:#b3b3ff',
                 'Backlog':'background-color:#e6ccb3'
             };
-            var debug = false;
+            var debug = true;
             var baseContext = "/jira";
             var baseURL = '';
             var baseBrowseURL = '';
@@ -304,6 +304,12 @@
                 {
                     if(!(links[i].inwardIssue===undefined))
                     {
+                        if(debug)
+                        {
+                            console.log('issuetype')';
+                            console.log(links[i].type.inward);
+                            console.log(links[i]);
+                        }
                         if (usedLinkTypes.indexOf(links[i].type.inward)>-1)
                         {
                             handleTreeData(tree,links[i].inwardIssue, parent.id);
