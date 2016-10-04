@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      0.1
+// @version      0.2
 // @description  shows a tree widget with all issues linked as child to the selected issue
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
+// @match        *://*/secure/Dashboar*
 // @grant        none
 // @require https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js
 // @require https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.2.3/jquery.contextMenu.min.js
@@ -126,11 +127,25 @@
             ////////////////////////////////////
             var styleObject = {
                 'Done':'background-color:lightgray;color:darkgray;text-decoration: line-through',
+                'Geschlossen':'background-color:lightgray;color:darkgray;text-decoration: line-through',
+                'Fertig':'background-color:lightgray;color:darkgray;text-decoration: line-through',
+                'Erfolgreich':'background-color:lightgray;color:darkgray;text-decoration: line-through',
                 'Open':'background-color:#ffcccc',
+                'Offen':'background-color:#ffcccc',
+                'Analyse':'background-color:#ffcc00',
                 'Reopened':'background-color:#ffcccc',
+                'Erneut geöffnet':'background-color:#ffcccc',
                 'To Do':'background-color:#ffcccc',
+                'Aufgaben':'background-color:#ffcccc',
+                'In Bestätigung':'background-color:#ffcccc',
+                'Vorlage zur Bestätigung':'background-color:#ffcccc',
+                'Freigegeben':'background-color:#ffcccc',
+                'Abgestimmt':'',
+                'Bestätigt':'',
                 'Resolved':'background-color:#ccffcc',
+                'Erledigt':'background-color:#ccffcc',
                 'In Progress':'background-color:#b3b3ff',
+                'In Arbeit':'background-color:#b3b3ff',
                 'Backlog':'background-color:#e6ccb3'
             };
             var debug = false;
