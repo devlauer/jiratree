@@ -1,17 +1,21 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.0
-// @description  shows a tree widget with all issues linked as child to the selected issue
+// @version      1.1.1
+// @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
 // @match        *://*/secure/Dashboar*
+// @updateURL    https://raw.githubusercontent.com/devlauer/jiratree/master/src/jiratree.user.js
+// @downloadURL  https://raw.githubusercontent.com/devlauer/jiratree/master/src/jiratree.user.js
 // @grant        none
 // @require https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js
 // @require https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.2.3/jquery.contextMenu.min.js
 // @require https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.0/jquery-ui.min.js
 // @require https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.2.3/jquery.ui.position.min.js
 // @require https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.1/jstree.min.js
+// @require https://cdnjs.cloudflare.com/ajax/libs/i18next/3.4.3/i18next.min.js
+// @require https://cdnjs.cloudflare.com/ajax/libs/i18next-browser-languagedetector/1.0.0/i18nextBrowserLanguageDetector.min.js
 // @run-at document-end
 // ==/UserScript==
 
@@ -20,7 +24,37 @@
 (function() {
     'use strict';
     $(document).ready(function() {
-
+        i18next.use(i18nextBrowserLanguageDetector).init({
+            detection: {
+                // order and from where user language should be detected
+                order: [ 'htmlTag','navigator'],
+                // keys or params to lookup language from
+                lookupQuerystring: 'lng',
+                // optional htmlTag with lang attribute, the default is:
+                htmlTag: document.documentElement
+            },        
+            resources: {
+                en: {
+                    translation: {
+                        "titleDialog": "Treeview",
+                        "showInWindow":"show in new window",
+                        "showInSameWindow":"show in same window",
+                        "showClosed":"show closed issues"
+                    }
+                },
+                de: {
+                    translation: {
+                        "titleDialog": "Baumansicht",
+                        "showInWindow":"in neuem Fenster anzeigen",
+                        "showInSameWindow":"im gleichen Fenster anzeigen",
+                        "showClosed":"geschlossene Tickets anzeigen"
+                    }
+                }
+            }
+        }, function(err, t) {
+            // initialized and ready to go!
+            console.log("key: ", i18next.t('key') );
+        });
         /////////////////////////////////////////////////////////////////////////////////////
         // custom css
         ////////////////////////////////////////////////////////////////////////////////////
@@ -60,7 +94,7 @@
         ////////////////////////////////////////////////////////////////////////////////////
 
 
-        $('body').append("<div id='dialogBaum' title='Treeview'><div id='treetable'></div></div> ");
+        $('body').append("<div id='dialogBaum' title='"+i18next.t('titleDialog')+"'><input type='checkbox' id='showClosed' value='true' checked='checked'/>"+i18next.t('showClosed')+"<div id='treetable'></div></div> ");
         var dWidth = $(window).width() * 0.9;
         var dHeight = $(window).height() * 0.9; 
         $( "#dialogBaum" ).dialog({autoOpen: false,
@@ -68,6 +102,7 @@
                                    height: dHeight,
                                    resizable: false,
                                    modal: true});
+
         /////////////////////////////////////////////////////////////////////////////////////
         // tree widget
         ////////////////////////////////////////////////////////////////////////////////////
@@ -82,16 +117,15 @@
              "plugins" : [ "contextmenu" ],
              "contextmenu": {
                  "items": function ($node) {
-                     console.log('test');
                      return {
                          "ShowInWindow": {
-                             "label": "show in new window",
+                             "label": i18next.t('showInWindow'),
                              "action": function (obj) {
                                  de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,true);
                              }
                          },
                          "Show": {
-                             "label": "show in same window",
+                             "label": i18next.t('showInSameWindow'),
                              "action": function (obj) {
                                  de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,false);
                              }
@@ -112,7 +146,7 @@
                 de.elnarion.jira.paintTree(issueKey);
             },
             items: {
-                "Treeview": {name: "Treeview", icon: "tree"}    
+                "Treeview": {name: i18next.t('titleDialog'), icon: "tree"}    
             }
         });
 
@@ -153,7 +187,15 @@
                 'In Arbeit':'background-color:#b3b3ff',
                 'Backlog':'background-color:#e6ccb3'
             };
-            var debug = true;
+            var closedTypes = [
+                'Done',
+                'Geschlossen',
+                'Fertig',
+                'Erfolgreich'
+            ];
+            var debug = false;
+            var showClosedIssues = true;
+            var currentIssueRoot = '';
             var baseContext = "/jira";
             var baseURL = '';
             var baseBrowseURL = '';
@@ -162,7 +204,7 @@
                 'is blocked by',
                 'hängt ab von',
                 'Wird umgesetzt in'
-                ];
+            ];
             var currentIssue = {};
             var promiseContext = $.ajax({
                 url: baseContext+"/rest/api/latest/serverInfo",
@@ -205,7 +247,6 @@
             {
                 $('#treetable').jstree(true).settings.core.data = root;
                 $('#treetable').jstree(true).refresh();
-//                $( "#dialogBaum" ).dialog({autoOpen: false, modal: true});
                 $( "#dialogBaum" ).dialog('open');
                 if(debug)
                 {
@@ -256,12 +297,17 @@
                 result.text = issue.fields.summary;
                 if(result.text=== undefined)
                     result.text=issue.key;
+                result.text = issue.key + result.text;
                 var styleKey = issue.fields.status.name;
                 if(debug)
                 {
                     console.log('style for reference is');
                     console.log('::'+styleKey+'::');
                     console.log('styleObject'+styleObject[styleKey]);
+                }
+                if(!showClosedIssues && closedTypes.indexOf(styleKey)>-1)
+                {
+                    return;
                 }
                 if(!(styleObject[styleKey]===undefined))
                 {
@@ -283,8 +329,11 @@
             {
                 var child={};
                 child = fillIssueData(issue, parentId);
-                treeArray.push(child);
-                resolveData(child,treeArray);                
+                if(!(child===undefined))
+                {
+                    treeArray.push(child);
+                    resolveData(child,treeArray);                
+                }
             }
             /////////////////////////////////////
             // private buildTree()
@@ -306,7 +355,7 @@
                 var jsontree;
                 for(i=0;i<linksLength;i++)
                 {
-                    
+
                     if(!(links[i].type===undefined))
                     {
                         jsontree = JSON.stringify(tree);
@@ -367,6 +416,7 @@
             // paints a tree of an issue and its descendants
             /////////////////////////////////////
             function paintTree(issuekey){
+                currentIssueRoot=issuekey;
                 var promise = getIssue(issuekey);
                 var tree = {};
                 $.when(promise.done(function(data){
@@ -395,18 +445,32 @@
                 }
                 window.open(baseBrowseURL+issuekey, windowname); 
             }
+            function toggleSwitchClosedIssues()
+            {
+                console.log('toggleSwitch');
+                console.log(showClosedIssues);
+                console.log(currentIssueRoot);
+                showClosedIssues = !showClosedIssues;
+                paintTree(currentIssueRoot);
+            }
             /////////////////////////////////////
             // public functions
             /////////////////////////////////////            
             return {
                 getIssue: getIssue,
                 paintTree: paintTree,
-                showIssue: showIssue
+                showIssue: showIssue,
+                toggleSwitchClosedIssues : toggleSwitchClosedIssues
             };
         }();
 
         /////////////////////////////////////////////////////////////////////////////////////
         // end custom namespace de.elnarion
         ////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////
+        // Add function to checkbox
+        ////////////////////////////////////////////////////////////////////////////////////
+        $('#showClosed').change(de.elnarion.jira.toggleSwitchClosedIssues);
     });
+
 })();
