@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.1.1
+// @version      1.2.1
 // @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
 // @match        *://*/secure/Dashboar*
+// @match        *://*/*/browse/*
+// @match        *://*/browse/*
 // @updateURL    https://raw.githubusercontent.com/devlauer/jiratree/master/src/jiratree.user.js
 // @downloadURL  https://raw.githubusercontent.com/devlauer/jiratree/master/src/jiratree.user.js
 // @grant        none
@@ -16,12 +18,14 @@
 // @require https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.1/jstree.min.js
 // @require https://cdnjs.cloudflare.com/ajax/libs/i18next/3.4.3/i18next.min.js
 // @require https://cdnjs.cloudflare.com/ajax/libs/i18next-browser-languagedetector/1.0.0/i18nextBrowserLanguageDetector.min.js
+// @require https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js
+// @require https://cdnjs.cloudflare.com/ajax/libs/json-editor/0.7.28/jsoneditor.min.js
 // @run-at document-end
 // ==/UserScript==
 
 
-
-(function() {
+newJQuery = $.noConflict(true);
+(function($) {
     'use strict';
     $(document).ready(function() {
         i18next.use(i18nextBrowserLanguageDetector).init({
@@ -39,7 +43,10 @@
                         "titleDialog": "Treeview",
                         "showInWindow":"show in new window",
                         "showInSameWindow":"show in same window",
-                        "showClosed":"show closed issues"
+                        "showClosed":"show closed issues",
+                        "buttonClose":"Ok",
+                        "buttonPreferences":"Preferences",
+                        "titleDialogPreferences":"Preferences"
                     }
                 },
                 de: {
@@ -47,7 +54,10 @@
                         "titleDialog": "Baumansicht",
                         "showInWindow":"in neuem Fenster anzeigen",
                         "showInSameWindow":"im gleichen Fenster anzeigen",
-                        "showClosed":"geschlossene Tickets anzeigen"
+                        "showClosed":"geschlossene Tickets anzeigen",
+                        "buttonClose":"Schließen",
+                        "buttonPreferences":"Einstellungen",
+                        "titleDialogPreferences":"Einstellungen"
                     }
                 }
             }
@@ -90,67 +100,6 @@
         document.getElementsByTagName("head")[0].appendChild(htmlDiv.childNodes[1]);
 
         /////////////////////////////////////////////////////////////////////////////////////
-        // dialog widget
-        ////////////////////////////////////////////////////////////////////////////////////
-
-
-        $('body').append("<div id='dialogBaum' title='"+i18next.t('titleDialog')+"'><input type='checkbox' id='showClosed' value='true' checked='checked'/>"+i18next.t('showClosed')+"<div id='treetable'></div></div> ");
-        var dWidth = $(window).width() * 0.9;
-        var dHeight = $(window).height() * 0.9; 
-        $( "#dialogBaum" ).dialog({autoOpen: false,
-                                   width: dWidth,
-                                   height: dHeight,
-                                   resizable: false,
-                                   modal: true});
-
-        /////////////////////////////////////////////////////////////////////////////////////
-        // tree widget
-        ////////////////////////////////////////////////////////////////////////////////////
-
-        $('#treetable').jstree(
-            { 'core' : 
-             { 'data' : 
-              [
-                  {id:'id1',text:'Simple root node',parent:'#'}
-              ]
-             },
-             "plugins" : [ "contextmenu" ],
-             "contextmenu": {
-                 "items": function ($node) {
-                     return {
-                         "ShowInWindow": {
-                             "label": i18next.t('showInWindow'),
-                             "action": function (obj) {
-                                 de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,true);
-                             }
-                         },
-                         "Show": {
-                             "label": i18next.t('showInSameWindow'),
-                             "action": function (obj) {
-                                 de.elnarion.jira.showIssue(obj.reference[0].parentElement.id,false);
-                             }
-                         }
-                     };
-                 }
-             }
-            }
-        );
-        /////////////////////////////////////////////////////////////////////////////////////
-        // standard context-menu
-        ////////////////////////////////////////////////////////////////////////////////////
-
-        $(".dashboard-item-frame").contextMenu({
-            selector: '.issuekey', 
-            callback: function(key, options) {
-                var issueKey = options.$trigger.find(".issue-link").attr('data-issue-key');
-                de.elnarion.jira.paintTree(issueKey);
-            },
-            items: {
-                "Treeview": {name: i18next.t('titleDialog'), icon: "tree"}    
-            }
-        });
-
-        /////////////////////////////////////////////////////////////////////////////////////
         // custom namespace de.elnarion
         // - used to separate all custom functions from the global namespace
         ////////////////////////////////////////////////////////////////////////////////////
@@ -161,38 +110,173 @@
         }();
         de.elnarion.counter = 0;
         de.elnarion.jira = function(){
+            /////////////////////////////////////////////////////////////////////////////////////
+            // dialog widget for treeview and preferences
+            ////////////////////////////////////////////////////////////////////////////////////
+
+
+            $('body').append("<div id='dialogBaum' title='"+i18next.t('titleDialog')+"'><input type='checkbox' id='showClosed' value='true' checked='checked'/>"+i18next.t('showClosed')+"<div id='treetable'></div></div> ");
+            $('body').append("<div id='dialogPreferences' title='"+i18next.t('titleDialogPreferences')+"'><div id='preferences'></div></div> ");
+            var dWidth = $(window).width() * 0.9;
+            var dHeight = $(window).height() * 0.9; 
+            $( "#dialogBaum" ).dialog({autoOpen: false,
+                                       width: dWidth,
+                                       height: dHeight,
+                                       resizable: false,
+                                       modal: true,
+                                       buttons: [
+                                           {
+                                               text: i18next.t("buttonPreferences"),
+                                               click: function() {
+                                                   showPreferences();
+                                               }
+                                           },
+                                           {
+                                               text: i18next.t("buttonClose"),
+                                               click: function() {
+                                                   $( this ).dialog( "close" );
+                                               }
+                                           }
+                                       ]});
+            $( "#dialogPreferences" ).dialog({autoOpen: false,
+                                              resizable: false,
+                                              modal: true,
+                                              buttons: [
+                                                  {
+                                                      text: i18next.t("buttonClose"),
+                                                      click: function() {
+                                                          $( this ).dialog( "close" );
+                                                      }
+                                                  }
+                                              ]});
+            // Initialize the editor with a JSON schema
+            var editor = new JSONEditor(document.getElementById('preferences'),{
+                schema: {
+                    type: "object",
+                    title: i18next.t('titleDialogPreferences'),
+                    properties: {
+                        styleObject: {
+                            type: "array",
+                            title: "Styles",
+                            items: {
+                                title: "Style"
+                            }
+                        },
+                        closedTypes: {
+                            type: "array",
+                            items: {
+                                title: "Issue States as closed"
+                            }
+                        },
+                        usedLinkTypes: {
+                            type: "array",
+                            items: {
+                                title: "Linktypes being used for tree"
+                            }
+                        }
+                    }
+                },
+                // Disable additional properties
+                no_additional_properties: true,
+
+                // Require all properties by default
+                required_by_default: true
+            });
+            /////////////////////////////////////////////////////////////////////////////////////
+            // tree widget
+            ////////////////////////////////////////////////////////////////////////////////////
+
+            $('#treetable').jstree(
+                { 'core' : 
+                 { 'data' : 
+                  [
+                      {id:'id1',text:'Simple root node',parent:'#'}
+                  ]
+                 },
+                 "plugins" : [ "contextmenu" ],
+                 "contextmenu": {
+                     "items": function ($node) {
+                         return {
+                             "ShowInWindow": {
+                                 "label": i18next.t('showInWindow'),
+                                 "action": function (obj) {
+                                     showIssue(obj.reference[0].parentElement.id,true);
+                                 }
+                             },
+                             "Show": {
+                                 "label": i18next.t('showInSameWindow'),
+                                 "action": function (obj) {
+                                     showIssue(obj.reference[0].parentElement.id,false);
+                                 }
+                             }
+                         };
+                     }
+                 }
+                }
+            );
+            /////////////////////////////////////////////////////////////////////////////////////
+            // standard context-menu
+            ////////////////////////////////////////////////////////////////////////////////////
+
+            $("body").contextMenu({
+                selector: '.issue-link', 
+                callback: function(key, options) {
+                    
+                    var issueKey = options.$trigger.attr('data-issue-key');
+                    paintTree(issueKey);
+                },
+                items: {
+                    "Treeview": {name: i18next.t('titleDialog'), icon: "tree"}    
+                }
+            });
+            // enable json support on cookie
+            $.cookie.json = true;
+            $.cookie.defaults = { path: '/', expires: 36500 };
             /////////////////////////////////////
             // private defaultvalues
             ////////////////////////////////////
-            var styleObject = {
-                'Done':'background-color:lightgray;color:darkgray;text-decoration: line-through',
-                'Geschlossen':'background-color:lightgray;color:darkgray;text-decoration: line-through',
-                'Fertig':'background-color:lightgray;color:darkgray;text-decoration: line-through',
-                'Erfolgreich':'background-color:lightgray;color:darkgray;text-decoration: line-through',
-                'Open':'background-color:#ffcccc',
-                'Offen':'background-color:#ffcccc',
-                'Analyse':'background-color:#ffcc00',
-                'Reopened':'background-color:#ffcccc',
-                'Erneut geöffnet':'background-color:#ffcccc',
-                'To Do':'background-color:#ffcccc',
-                'Aufgaben':'background-color:#ffcccc',
-                'In Bestätigung':'background-color:#ffcccc',
-                'Vorlage zur Bestätigung':'background-color:#ffcccc',
-                'Freigegeben':'background-color:#ffcccc',
-                'Abgestimmt':'',
-                'Bestätigt':'',
-                'Resolved':'background-color:#ccffcc',
-                'Erledigt':'background-color:#ccffcc',
-                'In Progress':'background-color:#b3b3ff',
-                'In Arbeit':'background-color:#b3b3ff',
-                'Backlog':'background-color:#e6ccb3'
-            };
-            var closedTypes = [
-                'Done',
-                'Geschlossen',
-                'Fertig',
-                'Erfolgreich'
-            ];
+            // read from cookie where preferences are stored, but if undefined use default
+            var preferences = $.cookie('preferences');
+            if(preferences===undefined)
+            {
+                preferences = {
+                    styleObject : {
+                        'Done':'background-color:lightgray;color:darkgray;text-decoration: line-through',
+                        'Geschlossen':'background-color:lightgray;color:darkgray;text-decoration: line-through',
+                        'Fertig':'background-color:lightgray;color:darkgray;text-decoration: line-through',
+                        'Erfolgreich':'background-color:lightgray;color:darkgray;text-decoration: line-through',
+                        'Open':'background-color:#ffcccc',
+                        'Offen':'background-color:#ffcccc',
+                        'Analyse':'background-color:#ffcc00',
+                        'Reopened':'background-color:#ffcccc',
+                        'Erneut geöffnet':'background-color:#ffcccc',
+                        'To Do':'background-color:#ffcccc',
+                        'Aufgaben':'background-color:#ffcccc',
+                        'In Bestätigung':'background-color:#ffcccc',
+                        'Vorlage zur Bestätigung':'background-color:#ffcccc',
+                        'Freigegeben':'background-color:#ffcccc',
+                        'Abgestimmt':'',
+                        'Bestätigt':'',
+                        'Resolved':'background-color:#ccffcc',
+                        'Erledigt':'background-color:#ccffcc',
+                        'In Progress':'background-color:#b3b3ff',
+                        'In Arbeit':'background-color:#b3b3ff',
+                        'Backlog':'background-color:#e6ccb3'
+                    },
+                    closedTypes:
+                    [
+                        'Done',
+                        'Geschlossen',
+                        'Fertig',
+                        'Erfolgreich'
+                    ],
+                    usedLinkTypes: [
+                        'is blocked by',
+                        'hängt ab von',
+                        'Wird umgesetzt in'
+                    ]
+                };
+            }
             var debug = false;
             var showClosedIssues = true;
             var currentIssueRoot = '';
@@ -200,11 +284,6 @@
             var baseURL = '';
             var baseBrowseURL = '';
             var imageURL = '';
-            var usedLinkTypes = [
-                'is blocked by',
-                'hängt ab von',
-                'Wird umgesetzt in'
-            ];
             var currentIssue = {};
             var promiseContext = $.ajax({
                 url: baseContext+"/rest/api/latest/serverInfo",
@@ -303,15 +382,15 @@
                 {
                     console.log('style for reference is');
                     console.log('::'+styleKey+'::');
-                    console.log('styleObject'+styleObject[styleKey]);
+                    console.log('styleObject'+preferences.styleObject[styleKey]);
                 }
-                if(!showClosedIssues && closedTypes.indexOf(styleKey)>-1)
+                if(!showClosedIssues && preferences.closedTypes.indexOf(styleKey)>-1)
                 {
                     return;
                 }
-                if(!(styleObject[styleKey]===undefined))
+                if(!(preferences.styleObject[styleKey]===undefined))
                 {
-                    result.a_attr = { style:styleObject[styleKey]};                    
+                    result.a_attr = { style:preferences.styleObject[styleKey]};                    
                 }
                 result.icon = issue.fields.issuetype.iconUrl;
                 result.state = {  opened    : true  };
@@ -381,7 +460,7 @@
                         {
                             console.log('ignored issue'+linkedissue.key+' already inside');
                         }
-                        else if (usedLinkTypes.indexOf(linkedtype)>-1)
+                        else if (preferences.usedLinkTypes.indexOf(linkedtype)>-1)
                         {
                             handleTreeData(tree,linkedissue, parent.id);
                             children = true;
@@ -445,6 +524,10 @@
                 }
                 window.open(baseBrowseURL+issuekey, windowname); 
             }
+            /////////////////////////////////////
+            // public toggleSwitchClosedIssues()
+            //   shows or hides closed issues in the treeview
+            /////////////////////////////////////
             function toggleSwitchClosedIssues()
             {
                 console.log('toggleSwitch');
@@ -454,13 +537,24 @@
                 paintTree(currentIssueRoot);
             }
             /////////////////////////////////////
+            // public showPreferences()
+            //   shows the preferences for the treeview dialog
+            /////////////////////////////////////
+            function showPreferences()
+            {
+                console.log('showPreferences');
+                editor.setValue(preferences);
+                $( "#dialogPreferences" ).dialog('open');
+            }
+            /////////////////////////////////////
             // public functions
             /////////////////////////////////////            
             return {
                 getIssue: getIssue,
                 paintTree: paintTree,
                 showIssue: showIssue,
-                toggleSwitchClosedIssues : toggleSwitchClosedIssues
+                toggleSwitchClosedIssues : toggleSwitchClosedIssues,
+                showPreferences : showPreferences
             };
         }();
 
@@ -473,4 +567,4 @@
         $('#showClosed').change(de.elnarion.jira.toggleSwitchClosedIssues);
     });
 
-})();
+})(newJQuery);
