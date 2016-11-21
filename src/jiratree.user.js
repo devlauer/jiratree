@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.2.1
+// @version      1.2.2
 // @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -193,7 +193,12 @@ newJQuery = $.noConflict(true);
                       {id:'id1',text:'Simple root node',parent:'#'}
                   ]
                  },
-                 "plugins" : [ "contextmenu" ],
+                 "plugins" : [ "contextmenu","sort" ],
+                 "sort":function (a,b){
+                     var node_a = this.get_node(a);
+                     var node_b =this.get_node(b);
+                     return node_a.li_attr["data-rank"]>node_b.li_attr["data-rank"];
+                 },
                  "contextmenu": {
                      "items": function ($node) {
                          return {
@@ -221,7 +226,7 @@ newJQuery = $.noConflict(true);
             $("body").contextMenu({
                 selector: '.issue-link', 
                 callback: function(key, options) {
-                    
+
                     var issueKey = options.$trigger.attr('data-issue-key');
                     paintTree(issueKey);
                 },
@@ -277,7 +282,7 @@ newJQuery = $.noConflict(true);
                     ]
                 };
             }
-            var debug = false;
+            var debug = true;
             var showClosedIssues = true;
             var currentIssueRoot = '';
             var baseContext = "/jira";
@@ -308,7 +313,7 @@ newJQuery = $.noConflict(true);
             /////////////////////////////////////
             function getIssue(issuekey, options){
                 var promise = $.ajax({
-                    url: baseURL+"issue/"+ issuekey +"?fields=timetracking,subtasks,sub-tasks,issuelinks,issuetype,status",
+                    url: baseURL+"issue/"+ issuekey +"?fields=timetracking,summary,subtasks,sub-tasks,issuelinks,issuetype,status,rank,customfield_10100",
                     type: "GET",
                     dataType: "json",
                     contentType: "application/json",
@@ -374,6 +379,10 @@ newJQuery = $.noConflict(true);
                 result.id = issue.key;
                 result.parent = parentID;
                 result.text = issue.fields.summary;
+                result.li_attr = {  };
+                result.li_attr["data-rank"] = issue.fields.customfield_10100;
+                if(result.li_attr["data-rank"]===undefined)
+                    result.li_attr["data-rank"] = 999;
                 if(result.text=== undefined)
                     result.text=issue.key;
                 result.text = issue.key + result.text;
@@ -407,12 +416,15 @@ newJQuery = $.noConflict(true);
             function handleTreeData(treeArray,issue,parentId)
             {
                 var child={};
-                child = fillIssueData(issue, parentId);
-                if(!(child===undefined))
-                {
-                    treeArray.push(child);
-                    resolveData(child,treeArray);                
-                }
+                var promise = getIssue(issue.key);
+                $.when(promise.done(function(data){
+                    child = fillIssueData(data,parentId);
+                    if(!(child===undefined))
+                    {
+                        treeArray.push(child);
+                        resolveData(child,treeArray);                
+                    }
+                }));                
             }
             /////////////////////////////////////
             // private buildTree()
