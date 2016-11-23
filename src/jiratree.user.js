@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.2.2
+// @version      1.2.3
 // @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -313,7 +313,7 @@ newJQuery = $.noConflict(true);
             /////////////////////////////////////
             function getIssue(issuekey, options){
                 var promise = $.ajax({
-                    url: baseURL+"issue/"+ issuekey +"?fields=timetracking,summary,subtasks,sub-tasks,issuelinks,issuetype,status,rank,customfield_10100",
+                    url: baseURL+"issue/"+ issuekey +"?fields=timetracking,summary,subtasks,sub-tasks,issuelinks,issuetype,status,rank,customfield_10100,customfield_10460",
                     type: "GET",
                     dataType: "json",
                     contentType: "application/json",
@@ -381,6 +381,8 @@ newJQuery = $.noConflict(true);
                 result.text = issue.fields.summary;
                 result.li_attr = {  };
                 result.li_attr["data-rank"] = issue.fields.customfield_10100;
+                if(result.li_attr["data-rank"]===undefined)
+                    result.li_attr["data-rank"] = issue.fields.customfield_10460;
                 if(result.li_attr["data-rank"]===undefined)
                     result.li_attr["data-rank"] = 999;
                 if(result.text=== undefined)
