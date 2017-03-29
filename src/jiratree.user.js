@@ -90,6 +90,11 @@ newJQuery = $.noConflict(true);
         link.type = 'text/css';
         link.href = 'https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.2/themes/default/style.min.css';    
         document.getElementsByTagName("head")[0].appendChild(link);
+        link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/typicons/2.0.8/typicons.min.css';    
+        document.getElementsByTagName("head")[0].appendChild(link);
         // small workaround for IE which does not like creating styles
         var css = ""+
             ".ui-dialog { overflow:hidden} "+
@@ -116,7 +121,7 @@ newJQuery = $.noConflict(true);
 
 
             $('body').append("<div id='dialogBaum' title='"+i18next.t('titleDialog')+"'><input type='checkbox' id='showClosed' value='true' checked='checked'/>"+i18next.t('showClosed')+"<div id='treetable'></div></div> ");
-            $('body').append("<div id='dialogPreferences' title='"+i18next.t('titleDialogPreferences')+"'><div id='preferences'></div></div> ");
+//            $('body').append("<div id='dialogPreferences' title='"+i18next.t('titleDialogPreferences')+"'><div id='preferences'></div></div> ");
             var dWidth = $(window).width() * 0.9;
             var dHeight = $(window).height() * 0.9; 
             $( "#dialogBaum" ).dialog({autoOpen: false,
@@ -125,12 +130,12 @@ newJQuery = $.noConflict(true);
                                        resizable: false,
                                        modal: true,
                                        buttons: [
-                                           {
-                                               text: i18next.t("buttonPreferences"),
-                                               click: function() {
-                                                   showPreferences();
-                                               }
-                                           },
+//                                           {
+//                                               text: i18next.t("buttonPreferences"),
+//                                               click: function() {
+//                                                   showPreferences();
+//                                               }
+//                                           },
                                            {
                                                text: i18next.t("buttonClose"),
                                                click: function() {
@@ -138,50 +143,50 @@ newJQuery = $.noConflict(true);
                                                }
                                            }
                                        ]});
-            $( "#dialogPreferences" ).dialog({autoOpen: false,
-                                              resizable: false,
-                                              modal: true,
-                                              buttons: [
-                                                  {
-                                                      text: i18next.t("buttonClose"),
-                                                      click: function() {
-                                                          $( this ).dialog( "close" );
-                                                      }
-                                                  }
-                                              ]});
-            // Initialize the editor with a JSON schema
-            var editor = new JSONEditor(document.getElementById('preferences'),{
-                schema: {
-                    type: "object",
-                    title: i18next.t('titleDialogPreferences'),
-                    properties: {
-                        styleObject: {
-                            type: "array",
-                            title: "Styles",
-                            items: {
-                                title: "Style"
-                            }
-                        },
-                        closedTypes: {
-                            type: "array",
-                            items: {
-                                title: "Issue States as closed"
-                            }
-                        },
-                        usedLinkTypes: {
-                            type: "array",
-                            items: {
-                                title: "Linktypes being used for tree"
-                            }
-                        }
-                    }
-                },
-                // Disable additional properties
-                no_additional_properties: true,
-
-                // Require all properties by default
-                required_by_default: true
-            });
+//            $( "#dialogPreferences" ).dialog({autoOpen: false,
+//                                              resizable: false,
+//                                              modal: true,
+//                                              buttons: [
+//                                                  {
+//                                                      text: i18next.t("buttonClose"),
+//                                                      click: function() {
+//                                                          $( this ).dialog( "close" );
+//                                                      }
+//                                                  }
+//                                              ]});
+//            // Initialize the editor with a JSON schema
+//            var editor = new JSONEditor(document.getElementById('preferences'),{
+//                schema: {
+//                    type: "object",
+//                    title: i18next.t('titleDialogPreferences'),
+//                    properties: {
+//                        styleObject: {
+//                            type: "array",
+//                            title: "Styles",
+//                            items: {
+//                                title: "Style"
+//                            }
+//                        },
+//                        closedTypes: {
+//                            type: "array",
+//                            items: {
+//                                title: "Issue States as closed"
+//                            }
+//                        },
+//                        usedLinkTypes: {
+//                            type: "array",
+//                            items: {
+//                                title: "Linktypes being used for tree"
+//                            }
+//                        }
+//                    }
+//                },
+//                // Disable additional properties
+//                no_additional_properties: true,
+//
+//                // Require all properties by default
+//                required_by_default: true
+//            });
             /////////////////////////////////////////////////////////////////////////////////////
             // tree widget
             ////////////////////////////////////////////////////////////////////////////////////
@@ -225,13 +230,22 @@ newJQuery = $.noConflict(true);
 
             $("body").contextMenu({
                 selector: '.issue-link', 
+                classname: 'typecn',
                 callback: function(key, options) {
 
                     var issueKey = options.$trigger.attr('data-issue-key');
-                    paintTree(issueKey);
+                    switch (key)
+                    {
+                       case "ShowInWindow":
+                           showIssue(issueKey,true);
+                           break;
+                       default: 
+                           paintTree(issueKey);
+                    }                    
                 },
                 items: {
-                    "Treeview": {name: i18next.t('titleDialog'), icon: "tree"}    
+                    "Treeview": {name: i18next.t('titleDialog'), icon: "leaf"}    ,
+                    "ShowInWindow": { name: i18next.t('showInWindow'), icon: "document-add"}
                 }
             });
             // enable json support on cookie
@@ -550,16 +564,16 @@ newJQuery = $.noConflict(true);
                 showClosedIssues = !showClosedIssues;
                 paintTree(currentIssueRoot);
             }
-            /////////////////////////////////////
-            // public showPreferences()
-            //   shows the preferences for the treeview dialog
-            /////////////////////////////////////
-            function showPreferences()
-            {
-                console.log('showPreferences');
-                editor.setValue(preferences);
-                $( "#dialogPreferences" ).dialog('open');
-            }
+//            /////////////////////////////////////
+//            // public showPreferences()
+//            //   shows the preferences for the treeview dialog
+//            /////////////////////////////////////
+//            function showPreferences()
+//            {
+//                console.log('showPreferences');
+//                editor.setValue(preferences);
+//                $( "#dialogPreferences" ).dialog('open');
+//            }
             /////////////////////////////////////
             // public functions
             /////////////////////////////////////            
@@ -567,8 +581,8 @@ newJQuery = $.noConflict(true);
                 getIssue: getIssue,
                 paintTree: paintTree,
                 showIssue: showIssue,
-                toggleSwitchClosedIssues : toggleSwitchClosedIssues,
-                showPreferences : showPreferences
+                toggleSwitchClosedIssues : toggleSwitchClosedIssues //,
+//                showPreferences : showPreferences
             };
         }();
 
