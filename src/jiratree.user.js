@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.2.3
+// @version      1.2.4
 // @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -378,7 +378,7 @@ newJQuery = $.noConflict(true);
                 }
                 result.id = issue.key;
                 result.parent = parentID;
-                result.text = issue.fields.summary;
+                result.text = ' '+issue.fields.summary;
                 result.li_attr = {  };
                 result.li_attr["data-rank"] = issue.fields.customfield_10100;
                 if(result.li_attr["data-rank"]===undefined)
