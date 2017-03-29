@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.2.5
+// @version      1.2.6
 // @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -390,11 +390,6 @@ newJQuery = $.noConflict(true);
                     console.log('issue');
                     console.log(issue);
                 }
-//                if(!(issue.fields.labels===undefined)&&issue.fields.labels.contains("igntlnode")&&(parentID.includes("PRO")||parentID.includes("TES")))
-//                {
-//                	console.log("id ignored because of label "+issue.key);
-//                	return;
-//                }
                 result.id = issue.key;
                 result.parent = parentID;
                 result.text = ' '+issue.fields.summary;
