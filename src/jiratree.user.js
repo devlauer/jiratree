@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.2.4
+// @version      1.2.5
 // @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -296,7 +296,7 @@ newJQuery = $.noConflict(true);
                     ]
                 };
             }
-            var debug = true;
+            var debug = false;
             var showClosedIssues = true;
             var currentIssueRoot = '';
             var baseContext = "/jira";
@@ -327,7 +327,7 @@ newJQuery = $.noConflict(true);
             /////////////////////////////////////
             function getIssue(issuekey, options){
                 var promise = $.ajax({
-                    url: baseURL+"issue/"+ issuekey +"?fields=timetracking,summary,subtasks,sub-tasks,issuelinks,issuetype,status,rank,customfield_10100,customfield_10460",
+                    url: baseURL+"issue/"+ issuekey +"?fields=timetracking,summary,labels,subtasks,sub-tasks,issuelinks,issuetype,status,rank,customfield_10100,customfield_10460",
                     type: "GET",
                     dataType: "json",
                     contentType: "application/json",
@@ -389,6 +389,11 @@ newJQuery = $.noConflict(true);
                 {
                     console.log('issue');
                     console.log(issue);
+                }
+                if(!(issue.fields.labels===undefined)&&issue.fields.labels.contains("igntlnode")&&(parentID.includes("PRO")||parentID.includes("TES")))
+                {
+                	console.log("id ignored because of label "+issue.key);
+                	return;
                 }
                 result.id = issue.key;
                 result.parent = parentID;
