@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.2.8
+// @version      1.2.9
 // @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -366,7 +366,7 @@ newJQuery = $.noConflict(true);
                 de.elnarion.counter++;
                 childObject.state = {  opened    : true  };
                 $.when(getIssue(childObject.id).done(function(data){
-                    var result = buildTree(data,root,childObject);
+                    var result = buildTree(data,root,childObject,false);
                     de.elnarion.counter--;
                     if(de.elnarion.counter===0)
                     {
@@ -434,12 +434,12 @@ newJQuery = $.noConflict(true);
             //
             // sets the data for a tree-node and its style 
             /////////////////////////////////////
-            function handleTreeData(treeArray,issue,parentId)
+            function handleTreeData(treeArray,issue,parentId, parentIsRoot)
             {
                 var child={};
                 var promise = getIssue(issue.key);
                 $.when(promise.done(function(data){
-                    child = fillIssueData(data,parentId,false);
+                    child = fillIssueData(data,parentId,parentIsRoot);
                     if(!(child===undefined))
                     {
                         treeArray.push(child);
@@ -483,6 +483,8 @@ newJQuery = $.noConflict(true);
                             // type of the issue itself
                             linkedtype=links[i].type.inward;
                         }
+                        console.log(issue.key + 'links to'+ linkedissue.key+' type '+linkedtype);
+                        console.log(preferences.usedLinkTypes.indexOf(linkedtype)>-1);
                         if (preferences.usedLinkTypes.indexOf(linkedtype)>-1)
                         {
                             isRoot = false;
@@ -502,7 +504,7 @@ newJQuery = $.noConflict(true);
             // by iterating through all referenced issues, subTasks etc.
             // after everything is finished a tree-widget is painted or refreshed.
             /////////////////////////////////////
-            function buildTree(issue,tree,parent)
+            function buildTree(issue,tree,parent,parentIsRoot)
             {
                 var children = false;
                 var child={};            
@@ -540,7 +542,7 @@ newJQuery = $.noConflict(true);
                         }
                         else if (preferences.usedLinkTypes.indexOf(linkedtype)>-1)
                         {
-                            handleTreeData(tree,linkedissue, parent.id);
+                            handleTreeData(tree,linkedissue, parent.id,parentIsRoot);
                             children = true;
                         }
                     }
@@ -556,7 +558,7 @@ newJQuery = $.noConflict(true);
                             console.log('subtask');
                             console.log(subTasks[i]);
                         }
-                        handleTreeData(tree,subTasks[i], parent.id);
+                        handleTreeData(tree,subTasks[i], parent.id,parentIsRoot);
                         children = true;
                     }
                 }
@@ -580,7 +582,7 @@ newJQuery = $.noConflict(true);
                 	var root = false;
                 	root = isIssueRoot(data);
                     tree = fillIssueData(data,'#',root);
-                    buildTree(data,[tree],tree);
+                    buildTree(data,[tree],tree,root);
                 }));
             }
             /////////////////////////////////////
