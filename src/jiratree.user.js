@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         JIRA Tree
 // @namespace    http://elnarion.ad.loc/
-// @version      1.2.6
+// @version      1.2.8
 // @description  shows a tree widget with all issues linked to the selected issue as child 
 // @author       dev.lauer
 // @match        *://*/*/secure/Dashboar*
@@ -382,7 +382,7 @@ newJQuery = $.noConflict(true);
             // sets the data for a tree-node-object and its style 
             // and returns this object
             /////////////////////////////////////
-            function fillIssueData(issue,parentID)
+            function fillIssueData(issue,parentID,parentIsRoot)
             {
                 var result={};
                 if(debug)
@@ -390,7 +390,7 @@ newJQuery = $.noConflict(true);
                     console.log('issue');
                     console.log(issue);
                 }
-                if(!(issue.fields.labels===undefined)&&issue.fields.labels.contains("igntlnode")&&(parentID.includes("PRO")||parentID.includes("TES")))
+                if(!(issue.fields.labels===undefined)&&(issue.fields.labels.includes("igntlnode"))&&parentIsRoot)
                 {
                 	console.log("id ignored because of label "+issue.key);
                 	return;
@@ -439,13 +439,58 @@ newJQuery = $.noConflict(true);
                 var child={};
                 var promise = getIssue(issue.key);
                 $.when(promise.done(function(data){
-                    child = fillIssueData(data,parentId);
+                    child = fillIssueData(data,parentId,false);
                     if(!(child===undefined))
                     {
                         treeArray.push(child);
                         resolveData(child,treeArray);                
                     }
                 }));                
+            }
+            /////////////////////////////////////
+            // private isIssueRoot()
+            //    issue - the issuedata to be checked
+            //
+            // checks whether the issue has parent issues or not
+            /////////////////////////////////////
+            function isIssueRoot(issue)
+            {
+                var links = issue.fields.issuelinks;
+                var linksLength = links.length;
+                var i = 0;
+                var isRoot = true;
+                for(i=0;i<linksLength;i++)
+                {
+                    if(!(links[i].type===undefined))
+                    {
+                        if(debug)
+                        {
+                            console.log('issuetype');
+                            console.log(links[i].type.inward);
+                            console.log(links[i]);
+                        }
+                        var linkedissue = {};
+                        var linkedtype = {};
+                        if(!(links[i].inwardIssue===undefined))
+                        {
+                            linkedissue=links[i].inwardIssue;
+                            // type of the issue itself
+                            linkedtype=links[i].type.outward;
+                        }
+                        if(!(links[i].outwardIssue===undefined))
+                        {
+                            linkedissue=links[i].outwardIssue;
+                            // type of the issue itself
+                            linkedtype=links[i].type.inward;
+                        }
+                        if (preferences.usedLinkTypes.indexOf(linkedtype)>-1)
+                        {
+                            isRoot = false;
+                        }
+                    }
+                }
+            	
+            	return isRoot;
             }
             /////////////////////////////////////
             // private buildTree()
@@ -532,7 +577,9 @@ newJQuery = $.noConflict(true);
                 var promise = getIssue(issuekey);
                 var tree = {};
                 $.when(promise.done(function(data){
-                    tree = fillIssueData(data,'#');
+                	var root = false;
+                	root = isIssueRoot(data);
+                    tree = fillIssueData(data,'#',root);
                     buildTree(data,[tree],tree);
                 }));
             }
